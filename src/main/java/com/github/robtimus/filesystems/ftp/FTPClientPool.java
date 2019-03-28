@@ -178,6 +178,7 @@ final class FTPClientPool {
 
     final class Client implements Closeable {
 
+        public static final int KEEP_ALIVE_MIN_INTERVAL = 5000;
         private final FTPClient client;
         private final boolean pooled;
 
@@ -186,6 +187,7 @@ final class FTPClientPool {
         private FileTransferMode fileTransferMode;
 
         private int refCount = 0;
+        private long lastPacketTimeMs;
 
         private Client(boolean pooled) throws IOException {
             this.client = env.createClient(hostname, port);
@@ -211,20 +213,31 @@ final class FTPClientPool {
             if (env.ftpClientDebug()) {
                 this.debug("keepAlive");
             }
+            this.lastPacketTimeMs = System.currentTimeMillis();
             client.sendNoOp();
         }
 
         private boolean isConnected() {
             if (client.isConnected()) {
+                return checkKeepAlive();
+            }
+            return false;
+        }
+
+        private boolean checkKeepAlive() {
+            long now = System.currentTimeMillis();
+            if (lastPacketTimeMs < now - KEEP_ALIVE_MIN_INTERVAL) {
                 try {
                     keepAlive();
                     return true;
                 } catch (@SuppressWarnings("unused") IOException e) {
                     // the keep alive failed - treat as not connected, and actually disconnect quietly
                     disconnectQuietly();
+                    return false;
                 }
+            } else {
+                return true;
             }
-            return false;
         }
 
         private void disconnect() throws IOException {
@@ -254,6 +267,7 @@ final class FTPClientPool {
             if (env.ftpClientDebug()) {
                 this.debug("pwd");
             }
+            this.lastPacketTimeMs = System.currentTimeMillis();
 
             String pwd = client.printWorkingDirectory();
             if (pwd == null) {
@@ -283,6 +297,7 @@ final class FTPClientPool {
             if (env.ftpClientDebug()) {
                 this.debug("newInputStream", path);
             }
+            this.lastPacketTimeMs = System.currentTimeMillis();
 
             applyTransferOptions(options);
 
@@ -367,6 +382,7 @@ final class FTPClientPool {
             if (env.ftpClientDebug()) {
                 this.debug("newOutputStream", path);
             }
+            this.lastPacketTimeMs = System.currentTimeMillis();
 
 
             applyTransferOptions(options);
@@ -444,6 +460,7 @@ final class FTPClientPool {
         void storeFile(String path, InputStream local, TransferOptions options, Collection<? extends OpenOption> openOptions) throws IOException {
             applyTransferOptions(options);
 
+            this.lastPacketTimeMs = System.currentTimeMillis();
             if (!client.storeFile(path, local)) {
                 throw exceptionFactory.createNewOutputStreamException(path, client.getReplyCode(), client.getReplyString(), openOptions);
             }
@@ -453,6 +470,7 @@ final class FTPClientPool {
             if (env.ftpClientDebug()) {
                 this.debug("list", path);
             }
+            this.lastPacketTimeMs = System.currentTimeMillis();
             return client.listFiles(path);
         }
 
@@ -460,6 +478,7 @@ final class FTPClientPool {
             if (env.ftpClientDebug()) {
                 this.debug("list", path, filter);
             }
+            this.lastPacketTimeMs = System.currentTimeMillis();
             return client.listFiles(path, filter);
         }
 
@@ -473,6 +492,7 @@ final class FTPClientPool {
             if (env.ftpClientDebug()) {
                 this.debug("mkdir", path);
             }
+            this.lastPacketTimeMs = System.currentTimeMillis();
             if (!client.makeDirectory(path)) {
                 throw exceptionFactory.createCreateDirectoryException(path, client.getReplyCode(), client.getReplyString());
             }
@@ -483,6 +503,7 @@ final class FTPClientPool {
                 this.debug("delete", path);
             }
 
+            this.lastPacketTimeMs = System.currentTimeMillis();
             boolean success = isDirectory ? client.removeDirectory(path) : client.deleteFile(path);
             if (!success) {
                 throw exceptionFactory.createDeleteException(path, client.getReplyCode(), client.getReplyString(), isDirectory);
@@ -493,6 +514,7 @@ final class FTPClientPool {
             if (env.ftpClientDebug()) {
                 this.debug("rename", source, target);
             }
+            this.lastPacketTimeMs = System.currentTimeMillis();
 
             if (!client.rename(source, target)) {
                 throw exceptionFactory.createMoveException(source, target, client.getReplyCode(), client.getReplyString());
@@ -503,6 +525,7 @@ final class FTPClientPool {
             if (env.ftpClientDebug()) {
                 this.debug("mdtm", path);
             }
+            this.lastPacketTimeMs = System.currentTimeMillis();
             FTPFile file = client.mdtmFile(path);
             return file == null ? null : file.getTimestamp();
         }
@@ -510,7 +533,7 @@ final class FTPClientPool {
 
         private void debug(String cmd, Object... args) {
             String argsString = Arrays.stream(args)
-                    .map(Object::toString)
+                    .map(a -> a.toString())
                     .map(s -> " " + s)
                     .reduce(String::concat)
                     .orElse("");
