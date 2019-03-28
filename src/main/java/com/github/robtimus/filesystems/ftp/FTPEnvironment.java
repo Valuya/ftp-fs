@@ -117,8 +117,10 @@ public class FTPEnvironment implements Map<String, Object>, Cloneable {
     private static final String SUPPORT_ABSOLOTE_FILE_PATHS = "supportAbsoluteFilePaths"; //$NON-NLS-1$
     private static final String CALCULATE_ACTUAL_TOTAL_SPACE = "calculateActualTotalSpace"; //$NON-NLS-1$
     private static final String ACCURATE_TIMESTAMPS = "fetchAccurateTimeStamps"; //$NON-NLS-1$
+    private static final String FILESYSTEM_STRATEGY = "ftpFilesystemStrategy"; //$NON-NLS-1$
 
     private Map<String, Object> map;
+    private FTPFilesystemStrategy filesystemStrategy;
 
     /**
      * Creates a new FTP environment.
@@ -629,6 +631,15 @@ public class FTPEnvironment implements Map<String, Object>, Cloneable {
     public FTPEnvironment withAccurateTimestamps(boolean accurateTimestamps) {
         put(ACCURATE_TIMESTAMPS, accurateTimestamps);
         return this;
+    }
+
+    public FTPEnvironment withFilesystemStrategy(FTPFilesystemStrategy filesystemStrategy) {
+        this.filesystemStrategy = filesystemStrategy;
+        return this;
+    }
+
+    public FTPFilesystemStrategy getFilesystemStrategy() {
+        return filesystemStrategy;
     }
 
     /**

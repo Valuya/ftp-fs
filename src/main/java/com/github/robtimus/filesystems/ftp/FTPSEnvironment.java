@@ -339,6 +339,11 @@ public class FTPSEnvironment extends FTPEnvironment {
         return this;
     }
 
+    public FTPEnvironment withFilesystemStrategy(FTPFilesystemStrategy filesystemStrategy) {
+        super.withFilesystemStrategy(filesystemStrategy);
+        return this;
+    }
+
     /**
      * @deprecated {@link FileStore#getTotalSpace()} does not need to traverse the file system, because that would calculate the total <em>used</em>
      * space, not the total space.

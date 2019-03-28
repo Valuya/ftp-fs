@@ -17,7 +17,6 @@
 
 package com.github.robtimus.filesystems.ftp;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
@@ -176,7 +175,7 @@ final class FTPClientPool {
         pool.add(client);
     }
 
-    final class Client implements Closeable {
+    final class Client implements FTPFileSystemClient {
 
         public static final int KEEP_ALIVE_MIN_INTERVAL = 5000;
         private final FTPClient client;
@@ -209,7 +208,8 @@ final class FTPClientPool {
             return refCount;
         }
 
-        private void keepAlive() throws IOException {
+        @Override
+        public void keepAlive() throws IOException {
             if (env.ftpClientDebug()) {
                 this.debug("keepAlive");
             }
@@ -263,7 +263,8 @@ final class FTPClientPool {
             }
         }
 
-        String pwd() throws IOException {
+        @Override
+        public String pwd() throws IOException {
             if (env.ftpClientDebug()) {
                 this.debug("pwd");
             }
@@ -291,8 +292,9 @@ final class FTPClientPool {
             }
         }
 
+        @Override
         @SuppressWarnings("resource")
-        InputStream newInputStream(String path, OpenOptions options) throws IOException {
+        public InputStream newInputStream(String path, OpenOptions options) throws IOException {
             assert options.read;
             if (env.ftpClientDebug()) {
                 this.debug("newInputStream", path);
@@ -376,8 +378,9 @@ final class FTPClientPool {
             }
         }
 
+        @Override
         @SuppressWarnings("resource")
-        OutputStream newOutputStream(String path, OpenOptions options) throws IOException {
+        public OutputStream newOutputStream(String path, OpenOptions options) throws IOException {
             assert options.write;
             if (env.ftpClientDebug()) {
                 this.debug("newOutputStream", path);
@@ -457,7 +460,8 @@ final class FTPClientPool {
             }
         }
 
-        void storeFile(String path, InputStream local, TransferOptions options, Collection<? extends OpenOption> openOptions) throws IOException {
+        @Override
+        public void storeFile(String path, InputStream local, TransferOptions options, Collection<? extends OpenOption> openOptions) throws IOException {
             applyTransferOptions(options);
 
             this.lastPacketTimeMs = System.currentTimeMillis();
@@ -466,7 +470,8 @@ final class FTPClientPool {
             }
         }
 
-        FTPFile[] listFiles(String path) throws IOException {
+        @Override
+        public FTPFile[] listFiles(String path) throws IOException {
             if (env.ftpClientDebug()) {
                 this.debug("list", path);
             }
@@ -474,7 +479,8 @@ final class FTPClientPool {
             return client.listFiles(path);
         }
 
-        FTPFile[] listFiles(String path, FTPFileFilter filter) throws IOException {
+        @Override
+        public FTPFile[] listFiles(String path, FTPFileFilter filter) throws IOException {
             if (env.ftpClientDebug()) {
                 this.debug("list", path, filter);
             }
@@ -482,13 +488,15 @@ final class FTPClientPool {
             return client.listFiles(path, filter);
         }
 
-        void throwIfEmpty(String path, FTPFile[] ftpFiles) throws IOException {
+        @Override
+        public void throwIfEmpty(String path, FTPFile[] ftpFiles) throws IOException {
             if (ftpFiles.length == 0) {
                 throw exceptionFactory.createGetFileException(path, client.getReplyCode(), client.getReplyString());
             }
         }
 
-        void mkdir(String path) throws IOException {
+        @Override
+        public void mkdir(String path) throws IOException {
             if (env.ftpClientDebug()) {
                 this.debug("mkdir", path);
             }
@@ -498,7 +506,8 @@ final class FTPClientPool {
             }
         }
 
-        void delete(String path, boolean isDirectory) throws IOException {
+        @Override
+        public void delete(String path, boolean isDirectory) throws IOException {
             if (env.ftpClientDebug()) {
                 this.debug("delete", path);
             }
@@ -510,7 +519,8 @@ final class FTPClientPool {
             }
         }
 
-        void rename(String source, String target) throws IOException {
+        @Override
+        public void rename(String source, String target) throws IOException {
             if (env.ftpClientDebug()) {
                 this.debug("rename", source, target);
             }
@@ -521,7 +531,8 @@ final class FTPClientPool {
             }
         }
 
-        Calendar mdtm(String path) throws IOException {
+        @Override
+        public Calendar mdtm(String path) throws IOException {
             if (env.ftpClientDebug()) {
                 this.debug("mdtm", path);
             }
@@ -529,7 +540,6 @@ final class FTPClientPool {
             FTPFile file = client.mdtmFile(path);
             return file == null ? null : file.getTimestamp();
         }
-
 
         private void debug(String cmd, Object... args) {
             String argsString = Arrays.stream(args)
