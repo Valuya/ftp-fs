@@ -24,11 +24,15 @@ import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.nio.file.OpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPFileFilter;
@@ -39,6 +43,8 @@ import org.apache.commons.net.ftp.FTPFileFilter;
  * @author Rob Spoor
  */
 final class FTPClientPool {
+
+    private final Logger LOG = Logger.getLogger(FTPClientPool.class.getName());
 
     private final String hostname;
     private final int port;
@@ -202,6 +208,9 @@ final class FTPClientPool {
         }
 
         private void keepAlive() throws IOException {
+            if (env.ftpClientDebug()) {
+                this.debug("keepAlive");
+            }
             client.sendNoOp();
         }
 
@@ -242,6 +251,10 @@ final class FTPClientPool {
         }
 
         String pwd() throws IOException {
+            if (env.ftpClientDebug()) {
+                this.debug("pwd");
+            }
+
             String pwd = client.printWorkingDirectory();
             if (pwd == null) {
                 throw new FTPFileSystemException(client.getReplyCode(), client.getReplyString());
@@ -267,6 +280,9 @@ final class FTPClientPool {
         @SuppressWarnings("resource")
         InputStream newInputStream(String path, OpenOptions options) throws IOException {
             assert options.read;
+            if (env.ftpClientDebug()) {
+                this.debug("newInputStream", path);
+            }
 
             applyTransferOptions(options);
 
@@ -348,6 +364,10 @@ final class FTPClientPool {
         @SuppressWarnings("resource")
         OutputStream newOutputStream(String path, OpenOptions options) throws IOException {
             assert options.write;
+            if (env.ftpClientDebug()) {
+                this.debug("newOutputStream", path);
+            }
+
 
             applyTransferOptions(options);
 
@@ -430,10 +450,16 @@ final class FTPClientPool {
         }
 
         FTPFile[] listFiles(String path) throws IOException {
+            if (env.ftpClientDebug()) {
+                this.debug("list", path);
+            }
             return client.listFiles(path);
         }
 
         FTPFile[] listFiles(String path, FTPFileFilter filter) throws IOException {
+            if (env.ftpClientDebug()) {
+                this.debug("list", path, filter);
+            }
             return client.listFiles(path, filter);
         }
 
@@ -444,12 +470,19 @@ final class FTPClientPool {
         }
 
         void mkdir(String path) throws IOException {
+            if (env.ftpClientDebug()) {
+                this.debug("mkdir", path);
+            }
             if (!client.makeDirectory(path)) {
                 throw exceptionFactory.createCreateDirectoryException(path, client.getReplyCode(), client.getReplyString());
             }
         }
 
         void delete(String path, boolean isDirectory) throws IOException {
+            if (env.ftpClientDebug()) {
+                this.debug("delete", path);
+            }
+
             boolean success = isDirectory ? client.removeDirectory(path) : client.deleteFile(path);
             if (!success) {
                 throw exceptionFactory.createDeleteException(path, client.getReplyCode(), client.getReplyString(), isDirectory);
@@ -457,14 +490,32 @@ final class FTPClientPool {
         }
 
         void rename(String source, String target) throws IOException {
+            if (env.ftpClientDebug()) {
+                this.debug("rename", source, target);
+            }
+
             if (!client.rename(source, target)) {
                 throw exceptionFactory.createMoveException(source, target, client.getReplyCode(), client.getReplyString());
             }
         }
 
         Calendar mdtm(String path) throws IOException {
+            if (env.ftpClientDebug()) {
+                this.debug("mdtm", path);
+            }
             FTPFile file = client.mdtmFile(path);
             return file == null ? null : file.getTimestamp();
         }
+
+
+        private void debug(String cmd, Object... args) {
+            String argsString = Arrays.stream(args)
+                    .map(Object::toString)
+                    .map(s -> " " + s)
+                    .reduce(String::concat)
+                    .orElse("");
+            LOG.log(Level.FINER, cmd + argsString);
+        }
+
     }
 }

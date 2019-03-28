@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import javax.net.ServerSocketFactory;
 import javax.net.SocketFactory;
+
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPClient.HostnameResolver;
@@ -106,6 +107,7 @@ public class FTPEnvironment implements Map<String, Object>, Cloneable {
     private static final String PASSIVE_NAT_WORKAROUND = "passiveNatWorkaround"; //$NON-NLS-1$
     private static final String PASSIVE_NAT_WORKAROUND_STRATEGY = "passiveNatWorkaroundStrategy"; //$NON-NLS-1$
     private static final String AUTODETECT_ENCODING = "autodetectEncoding"; //$NON-NLS-1$
+    private static final String FTP_DEBUG = "debug"; //$NON-NLS-1$
 
     // FTP file system support
 
@@ -114,6 +116,7 @@ public class FTPEnvironment implements Map<String, Object>, Cloneable {
     private static final String FILE_SYSTEM_EXCEPTION_FACTORY = "fileSystemExceptionFactory"; //$NON-NLS-1$
     private static final String SUPPORT_ABSOLOTE_FILE_PATHS = "supportAbsoluteFilePaths"; //$NON-NLS-1$
     private static final String CALCULATE_ACTUAL_TOTAL_SPACE = "calculateActualTotalSpace"; //$NON-NLS-1$
+    private static final String ACCURATE_TIMESTAMPS = "fetchAccurateTimeStamps"; //$NON-NLS-1$
 
     private Map<String, Object> map;
 
@@ -178,7 +181,7 @@ public class FTPEnvironment implements Map<String, Object>, Cloneable {
      *
      * @param username The username to use.
      * @param password The password to use.
-     * @param account The account to use.
+     * @param account  The account to use.
      * @return This object.
      */
     public FTPEnvironment withCredentials(String username, char[] password, String account) {
@@ -253,7 +256,7 @@ public class FTPEnvironment implements Map<String, Object>, Cloneable {
     /**
      * Stores whether or not {@code SO_LINGER} should be enabled, and if so, the linger time.
      *
-     * @param on {@code true} if {@code SO_LINGER} should be enabled, or {@code false} otherwise.
+     * @param on     {@code true} if {@code SO_LINGER} should be enabled, or {@code false} otherwise.
      * @param linger The linger time in seconds, if {@code on} is {@code true}.
      * @return This object.
      * @see Socket#setSoLinger(boolean, int)
@@ -537,7 +540,7 @@ public class FTPEnvironment implements Map<String, Object>, Cloneable {
      * Stores whether or not to enable the passive mode NAT workaround.
      * If enabled, a site-local PASV mode reply address will be replaced with the remote host address to which the PASV mode request was sent
      * (unless that is also a site local address). This gets around the problem that some NAT boxes may change the reply.
-     *
+     * <p>
      * The default is true, i.e. site-local replies are replaced.
      *
      * @param enabled {@code true} to enable replacing internal IP's in passive mode, or {@code false} otherwise.
@@ -553,11 +556,11 @@ public class FTPEnvironment implements Map<String, Object>, Cloneable {
     /**
      * Stores the workaround strategy to replace the PASV mode reply addresses.
      * This gets around the problem that some NAT boxes may change the reply.
-     *
+     * <p>
      * The default implementation is {@link NatServerResolverImpl}, i.e. site-local replies are replaced.
      *
      * @param resolver The workaround strategy to replace internal IP's in passive mode, or {@code null} to disable the workaround
-     *            (i.e. use PASV mode reply address.)
+     *                 (i.e. use PASV mode reply address.)
      * @return This object.
      * @since 1.1
      */
@@ -577,6 +580,12 @@ public class FTPEnvironment implements Map<String, Object>, Cloneable {
         put(AUTODETECT_ENCODING, autodetect);
         return this;
     }
+
+    public FTPEnvironment withDebug(boolean debug) {
+        put(FTP_DEBUG, debug);
+        return this;
+    }
+
 
     // FTP file system support
 
@@ -609,11 +618,16 @@ public class FTPEnvironment implements Map<String, Object>, Cloneable {
      * This setting should be set to {@code false} for servers that do not support {@code LIST} commands of absolute files.
      *
      * @param supportAbsoluteFilePaths {@code false} if FTP servers do not support absolute paths to list files,
-     *            or {@code true} to use the server settings.
+     *                                 or {@code true} to use the server settings.
      * @return This object.
      */
     public FTPEnvironment withAbsoluteFilePathSupport(boolean supportAbsoluteFilePaths) {
         put(SUPPORT_ABSOLOTE_FILE_PATHS, supportAbsoluteFilePaths);
+        return this;
+    }
+
+    public FTPEnvironment withAccurateTimestamps(boolean accurateTimestamps) {
+        put(ACCURATE_TIMESTAMPS, accurateTimestamps);
         return this;
     }
 
@@ -622,10 +636,10 @@ public class FTPEnvironment implements Map<String, Object>, Cloneable {
      * If not explicitly set to {@code true}, the method will return {@link Long#MAX_VALUE} instead.
      *
      * @param calculateActualTotalSpace {@code true} if {@link FileStore#getTotalSpace()} should calculate the actual total space by traversing the
-     *            file system, or {@code false} otherwise.
+     *                                  file system, or {@code false} otherwise.
      * @return This object.
      * @deprecated {@link FileStore#getTotalSpace()} does not need to traverse the file system, because that would calculate the total <em>used</em>
-     *             space, not the total space.
+     * space, not the total space.
      */
     @Deprecated
     public FTPEnvironment withActualTotalSpaceCalculation(boolean calculateActualTotalSpace) {
@@ -664,6 +678,14 @@ public class FTPEnvironment implements Map<String, Object>, Cloneable {
 
     boolean supportAbsoluteFilePaths() {
         return FileSystemProviderSupport.getBooleanValue(this, SUPPORT_ABSOLOTE_FILE_PATHS, true);
+    }
+
+    boolean accurateTimestamps() {
+        return FileSystemProviderSupport.getBooleanValue(this, ACCURATE_TIMESTAMPS, true);
+    }
+
+    boolean ftpClientDebug() {
+        return FileSystemProviderSupport.getBooleanValue(this, FTP_DEBUG, false);
     }
 
     FTPClient createClient(String hostname, int port) throws IOException {

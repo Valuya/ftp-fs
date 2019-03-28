@@ -35,6 +35,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.TrustManager;
+
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPClient.HostnameResolver;
 import org.apache.commons.net.ftp.FTPClientConfig;
@@ -283,6 +284,7 @@ public class FTPSEnvironment extends FTPEnvironment {
 
     /**
      * {@inheritDoc}
+     *
      * @deprecated Use {@link #withPassiveNatWorkaroundStrategy(FTPClient.HostnameResolver)} instead.
      */
     @Override
@@ -294,6 +296,7 @@ public class FTPSEnvironment extends FTPEnvironment {
 
     /**
      * {@inheritDoc}
+     *
      * @since 1.1
      */
     @Override
@@ -305,6 +308,11 @@ public class FTPSEnvironment extends FTPEnvironment {
     @Override
     public FTPSEnvironment withAutodetectEncoding(boolean autodetect) {
         super.withAutodetectEncoding(autodetect);
+        return this;
+    }
+
+    public FTPEnvironment withDebug(boolean debug) {
+        super.withDebug(debug);
         return this;
     }
 
@@ -326,9 +334,14 @@ public class FTPSEnvironment extends FTPEnvironment {
         return this;
     }
 
+    public FTPSEnvironment withAccurateTimestamps(boolean accurateTimestamps) {
+        super.withAccurateTimestamps(accurateTimestamps);
+        return this;
+    }
+
     /**
      * @deprecated {@link FileStore#getTotalSpace()} does not need to traverse the file system, because that would calculate the total <em>used</em>
-     *             space, not the total space.
+     * space, not the total space.
      */
     @Override
     @Deprecated

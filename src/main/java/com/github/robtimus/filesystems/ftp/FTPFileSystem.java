@@ -59,6 +59,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
+
 import org.apache.commons.net.ftp.FTPFile;
 import com.github.robtimus.filesystems.AbstractDirectoryStream;
 import com.github.robtimus.filesystems.FileSystemProviderSupport;
@@ -94,6 +95,7 @@ class FTPFileSystem extends FileSystem {
     private final String defaultDirectory;
 
     private final FTPFileStrategy ftpFileStrategy;
+    private final boolean accurateTimestamps;
 
     private final AtomicBoolean open = new AtomicBoolean(true);
 
@@ -111,6 +113,7 @@ class FTPFileSystem extends FileSystem {
 
             boolean supportAbsoluteFilePaths = env.supportAbsoluteFilePaths();
             this.ftpFileStrategy = FTPFileStrategy.getInstance(client, supportAbsoluteFilePaths);
+            this.accurateTimestamps = env.accurateTimestamps();
         }
     }
 
@@ -559,14 +562,14 @@ class FTPFileSystem extends FileSystem {
 
     private boolean hasAccess(FTPFile ftpFile, AccessMode mode) {
         switch (mode) {
-        case READ:
-            return ftpFile.hasPermission(FTPFile.USER_ACCESS, FTPFile.READ_PERMISSION);
-        case WRITE:
-            return ftpFile.hasPermission(FTPFile.USER_ACCESS, FTPFile.WRITE_PERMISSION);
-        case EXECUTE:
-            return ftpFile.hasPermission(FTPFile.USER_ACCESS, FTPFile.EXECUTE_PERMISSION);
-        default:
-            return false;
+            case READ:
+                return ftpFile.hasPermission(FTPFile.USER_ACCESS, FTPFile.READ_PERMISSION);
+            case WRITE:
+                return ftpFile.hasPermission(FTPFile.USER_ACCESS, FTPFile.WRITE_PERMISSION);
+            case EXECUTE:
+                return ftpFile.hasPermission(FTPFile.USER_ACCESS, FTPFile.EXECUTE_PERMISSION);
+            default:
+                return false;
         }
     }
 
@@ -575,11 +578,14 @@ class FTPFileSystem extends FileSystem {
         try (Client client = clientPool.get()) {
             FTPPathAndFilePair pair = toRealPath(client, path, followLinks);
 
-            // pair.ftpFile.getTimestamp() is most likely based on a too broad precision (day), so use mdtm to retrieve the timestamp (if available)
-            Calendar lastModified = client.mdtm(pair.ftpPath.path());
+            Calendar lastModified = null;
+            if (accurateTimestamps) {
+                // pair.ftpFile.getTimestamp() is most likely based on a too broad precision (day), so use mdtm to retrieve the timestamp (if available)
+                lastModified = client.mdtm(pair.ftpPath.path());
+            }
 
             // we need to call getLink unless followLinks is true, because for folders otherwise the data will not be accurate
-            FTPFile link = followLinks ? null : getLink(client, pair.ftpFile, path);
+            FTPFile link = followLinks ? getLink(client, pair.ftpFile, path) : null;
 
             FTPFile ftpFile = link == null ? pair.ftpFile : link;
 
@@ -632,7 +638,7 @@ class FTPFileSystem extends FileSystem {
         }
 
         private void addPermissionIfSet(FTPFile ftpFile, int access, int permission, PosixFilePermission value,
-                Set<PosixFilePermission> permissions) {
+                                        Set<PosixFilePermission> permissions) {
 
             if (ftpFile.hasPermission(access, permission)) {
                 permissions.add(value);
@@ -732,55 +738,55 @@ class FTPFileSystem extends FileSystem {
 
         for (Map.Entry<String, Object> entry : result.entrySet()) {
             switch (entry.getKey()) {
-            case "basic:lastModifiedTime": //$NON-NLS-1$
-            case "posix:lastModifiedTime": //$NON-NLS-1$
-                entry.setValue(posixAttributes.lastModifiedTime());
-                break;
-            case "basic:lastAccessTime": //$NON-NLS-1$
-            case "posix:lastAccessTime": //$NON-NLS-1$
-                entry.setValue(posixAttributes.lastAccessTime());
-                break;
-            case "basic:creationTime": //$NON-NLS-1$
-            case "posix:creationTime": //$NON-NLS-1$
-                entry.setValue(posixAttributes.creationTime());
-                break;
-            case "basic:size": //$NON-NLS-1$
-            case "posix:size": //$NON-NLS-1$
-                entry.setValue(posixAttributes.size());
-                break;
-            case "basic:isRegularFile": //$NON-NLS-1$
-            case "posix:isRegularFile": //$NON-NLS-1$
-                entry.setValue(posixAttributes.isRegularFile());
-                break;
-            case "basic:isDirectory": //$NON-NLS-1$
-            case "posix:isDirectory": //$NON-NLS-1$
-                entry.setValue(posixAttributes.isDirectory());
-                break;
-            case "basic:isSymbolicLink": //$NON-NLS-1$
-            case "posix:isSymbolicLink": //$NON-NLS-1$
-                entry.setValue(posixAttributes.isSymbolicLink());
-                break;
-            case "basic:isOther": //$NON-NLS-1$
-            case "posix:isOther": //$NON-NLS-1$
-                entry.setValue(posixAttributes.isOther());
-                break;
-            case "basic:fileKey": //$NON-NLS-1$
-            case "posix:fileKey": //$NON-NLS-1$
-                entry.setValue(posixAttributes.fileKey());
-                break;
-            case "owner:owner": //$NON-NLS-1$
-            case "posix:owner": //$NON-NLS-1$
-                entry.setValue(posixAttributes.owner());
-                break;
-            case "posix:group": //$NON-NLS-1$
-                entry.setValue(posixAttributes.group());
-                break;
-            case "posix:permissions": //$NON-NLS-1$
-                entry.setValue(posixAttributes.permissions());
-                break;
-            default:
-                // should not occur
-                throw new IllegalStateException("unexpected attribute name: " + entry.getKey()); //$NON-NLS-1$
+                case "basic:lastModifiedTime": //$NON-NLS-1$
+                case "posix:lastModifiedTime": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.lastModifiedTime());
+                    break;
+                case "basic:lastAccessTime": //$NON-NLS-1$
+                case "posix:lastAccessTime": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.lastAccessTime());
+                    break;
+                case "basic:creationTime": //$NON-NLS-1$
+                case "posix:creationTime": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.creationTime());
+                    break;
+                case "basic:size": //$NON-NLS-1$
+                case "posix:size": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.size());
+                    break;
+                case "basic:isRegularFile": //$NON-NLS-1$
+                case "posix:isRegularFile": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.isRegularFile());
+                    break;
+                case "basic:isDirectory": //$NON-NLS-1$
+                case "posix:isDirectory": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.isDirectory());
+                    break;
+                case "basic:isSymbolicLink": //$NON-NLS-1$
+                case "posix:isSymbolicLink": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.isSymbolicLink());
+                    break;
+                case "basic:isOther": //$NON-NLS-1$
+                case "posix:isOther": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.isOther());
+                    break;
+                case "basic:fileKey": //$NON-NLS-1$
+                case "posix:fileKey": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.fileKey());
+                    break;
+                case "owner:owner": //$NON-NLS-1$
+                case "posix:owner": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.owner());
+                    break;
+                case "posix:group": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.group());
+                    break;
+                case "posix:permissions": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.permissions());
+                    break;
+                default:
+                    // should not occur
+                    throw new IllegalStateException("unexpected attribute name: " + entry.getKey()); //$NON-NLS-1$
             }
         }
         return result;
