@@ -68,6 +68,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <build.plugin.gpg.skip>false</build.plugin.gpg.skip>
 
     <version.java>1.7</version.java>
 
@@ -377,6 +378,9 @@
             </goals>
           </execution>
         </executions>
+        <configuration>
+          <skip>${build.plugin.gpg.skip}</skip>
+        </configuration>
       </plugin>
 
       <plugin>
