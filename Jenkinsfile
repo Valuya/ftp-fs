@@ -28,7 +28,7 @@ pipeline {
                     }
                 }
                 withMaven(maven: 'maven', mavenSettingsConfig: 'nexus-mvn-settings') {
-                    sh "mvn install deploy:deploy -DskipTests=true -Dbuild.plugin.gpg.skip=true -DskipNexusStagingDeployMojo=true ${MVN_ARGS} -DaltDeploymentRepository=nexus@valuya::default::https://nexus.valuya.be/nexus/repository/maven-snapshots/"
+                    sh "mvn install deploy:deploy -DskipTests=true -Dbuild.plugin.gpg.skip=true -DskipNexusStagingDeployMojo=true ${MVN_ARGS}"
                 }
             }
         }
