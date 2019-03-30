@@ -25,8 +25,8 @@
   <packaging>jar</packaging>
 
   <name>ftp-fs</name>
-  <description>An FTP(S) NIO.2 file system</description>
-  <url>https://robtimus.github.io/ftp-fs/</url>
+  <description>An FTP(S) NIO.2 file system (forked from https://robtimus.github.io/ftp-fs/)</description>
+  <url>https://github.com/Valuya/ftp-fs</url>
   <inceptionYear>2016</inceptionYear>
 
   <licenses>
@@ -57,17 +57,31 @@
 
   <distributionManagement>
     <repository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+      <id>nexus@valuya</id>
+      <name>Nexus</name>
+      <url>https://nexus.valuya.be/nexus/repository/maven-release/</url>
     </repository>
     <snapshotRepository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+      <id>nexus@valuya</id>
+      <name>Nexus</name>
+      <url>https://nexus.valuya.be/nexus/repository/maven-snapshots/</url>
     </snapshotRepository>
   </distributionManagement>
 
+  <repositories>
+    <repository>
+      <id>nexus@valuya</id>
+      <url>https://nexus.valuya.be/nexus/repository/maven-public/</url>
+      <name>Nexus</name>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <build.plugin.gpg.skip>false</build.plugin.gpg.skip>
 
     <version.java>1.7</version.java>
 
@@ -377,6 +391,9 @@
             </goals>
           </execution>
         </executions>
+        <configuration>
+          <skip>${build.plugin.gpg.skip}</skip>
+        </configuration>
       </plugin>
 
       <plugin>
